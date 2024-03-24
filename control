@@ -1,0 +1,9 @@
+Package: dev.r58playz.whisper
+Name: Whisper
+Version: 0.0.1
+Architecture: iphoneos-arm
+Description: An awesome application!
+Maintainer: r58Playz
+Author: r58Playz
+Section: Utilities
+Depends: firmware (>= 14.0)
