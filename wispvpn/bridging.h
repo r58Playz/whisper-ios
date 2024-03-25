@@ -1,6 +1,6 @@
 #include <stdbool.h>
 
-bool whisper_init(int fd, char *ws, unsigned short mtu);
+bool whisper_init(int fd, const char *ws, unsigned short mtu);
 bool whisper_start();
 bool whisper_stop();
 
