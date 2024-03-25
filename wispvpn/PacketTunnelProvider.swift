@@ -1,11 +1,18 @@
 import NetworkExtension
 import Foundation
 
+enum WhisperError: Error {
+    case failedToGetConfig
+    case failedToInit
+    case failedToGetTunFd
+    case failedToGetWsIp
+}
+
 class WhisperThread: Thread {
     override func main() {
             NSLog("======================================= CUT BEFORE WHISPER_START");
             let val = whisper_start();
-            NSLog("whisper_start() = \(val)");
+            NSLog("whisper_start() = \(val ? "was ok!" : "failed with some error")");
             NSLog("======================================= CUT AFTER WHISPER_START");
     }
 }
@@ -13,6 +20,10 @@ class WhisperThread: Thread {
 class PacketTunnelProvider: NEPacketTunnelProvider {
     override func startTunnel(options: [String : NSObject]? = nil) async throws {
         // get ws from user
+        guard let proto = protocolConfiguration as? NETunnelProviderProtocol else {
+            throw WhisperError.failedToGetConfig
+        }
+        NSLog("protocolConfiguration \(proto)")
 
         // set mtu in tunnel settings
         let netSettings_preconnect = NEPacketTunnelNetworkSettings.init(tunnelRemoteAddress: "127.0.0.1");
@@ -20,23 +31,34 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         try await self.setTunnelNetworkSettings(netSettings_preconnect)
 
         // let tunFd = self?.packetFlow.value(forKeyPath: "socket.fileDescriptor") as! Int32
-        while self.getTunFd() == nil {
-            try await Task.sleep(nanoseconds: 100_000_000);
-            NSLog("waiting for packetFlow \(self.getTunFd())");
+        guard let tunFd = self.getTunFd() else {
+            NSLog("getTunFd failed");
+            throw WhisperError.failedToGetTunFd
         }
-        let tunFd = self.getTunFd()!;
         NSLog("======================================= CUT BEFORE WHISPER_INIT \(tunFd)");
         // whisper_init(tunFd, ws, mtu);
-        whisper_init(tunFd, "wss://anura.pro/", 1500);
+        if (!whisper_init(tunFd, protocolConfiguration.serverAddress, 1500)) {
+            NSLog("whisper_init failed");
+            throw WhisperError.failedToInit
+        }
         NSLog("======================================= CUT AFTER WHISPER_INIT");
 
         // let ip = whisper_get_ws_ip();
-        let ip = whisper_get_ws_ip();
-        let actualIp = String(cString: ip!);
+        guard let ip = whisper_get_ws_ip() else {
+            NSLog("whisper_get_ws_ip failed");
+            throw WhisperError.failedToGetWsIp
+        }
+        let actualIp = String(cString: ip);
         NSLog("======================================= CUT AFTER WHISPER_GET_WS_IP \(actualIp)");
         // set ip in tunnel settings
         let netSettings = NEPacketTunnelNetworkSettings.init(tunnelRemoteAddress: actualIp);
         netSettings.mtu = 1500;
+        let ipv4Settings = NEIPv4Settings(addresses: [ "10.0.10.1" ], subnetMasks: [ "255.255.255.0" ]);
+        ipv4Settings.includedRoutes = [ NEIPv4Route.default() ];
+        // exclude just the wisp server
+        ipv4Settings.excludedRoutes = [ NEIPv4Route.init(destinationAddress: actualIp, subnetMask: "255.255.255.255") ];
+        netSettings.ipv4Settings = ipv4Settings;
+        // TODO: IPv6
         NSLog("======================================= CUT BEFORE SET TUNNEL NET SETTINGS 2");
         try await self.setTunnelNetworkSettings(netSettings);
         NSLog("======================================= CUT AFTER SET TUNNEL NET SETTINGS 2");
@@ -44,6 +66,8 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         // DispatchQueue.global(qos: .default).async { whisper_start() }
 
         let thread = WhisperThread();
+        // surely 16M will be enough :clueless:
+        thread.stackSize = 4096 * 4096;
         thread.start();
 
         NSLog("======================================= CUT BEFORE WHISPER_FREE");
@@ -53,7 +77,10 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     
     override func stopTunnel(with reason: NEProviderStopReason, completionHandler: @escaping () -> Void) {
         NSLog("called stop");
-        whisper_stop();
+        if (!whisper_stop()) {
+            NSLog("FAILED TO STOP??");
+        }
+        NSLog("done");
         completionHandler()
     }
     

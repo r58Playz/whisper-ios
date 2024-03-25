@@ -2,21 +2,26 @@ import SwiftUI
 import NetworkExtension
 
 struct ContentView: View {
-    @State var buttonText = "Hello, world!";
+    @State var buttonText = "Add VPN";
+    @State var serverAddress = "wss://anura.pro/";
 	var body: some View {
-        Button(action: installBtn) {
-            Text(buttonText)
-                .padding()
+        VStack {
+            TextField("Server", text:$serverAddress)
+            Button(action: installBtn) {
+                Text(buttonText)
+                    .padding()
+            }
         }
 	}
 
     func makeManager() -> NETunnelProviderManager {
         let manager = NETunnelProviderManager()
-        manager.localizedDescription = "Whisper iOS"
+        manager.localizedDescription = "Whisper (\(serverAddress))"
 
         let proto = NETunnelProviderProtocol()
         proto.providerBundleIdentifier = "dev.r58playz.whisper.wispvpn"
-        proto.serverAddress = "127.0.0.1:4009"
+        proto.serverAddress = serverAddress
+        proto.includeAllNetworks = true
         proto.providerConfiguration = [:]
 
         manager.protocolConfiguration = proto
