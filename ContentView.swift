@@ -26,7 +26,6 @@ struct ContentView: View {
 
         manager.protocolConfiguration = proto
 
-        // Enable the manager by default
         manager.isEnabled = true
 
         return manager

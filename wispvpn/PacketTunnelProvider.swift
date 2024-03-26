@@ -6,14 +6,22 @@ enum WhisperError: Error {
     case failedToInit
     case failedToGetTunFd
     case failedToGetWsIp
+    case rustFailedWithSomeError
 }
 
 class WhisperThread: Thread {
+    var tunnel: PacketTunnelProvider
+    init(tunnel: PacketTunnelProvider) {
+        self.tunnel = tunnel
+    }
     override func main() {
-            NSLog("======================================= CUT BEFORE WHISPER_START");
-            let val = whisper_start();
-            NSLog("whisper_start() = \(val ? "was ok!" : "failed with some error")");
-            NSLog("======================================= CUT AFTER WHISPER_START");
+        NSLog("======================================= CUT BEFORE WHISPER_START");
+        let val = whisper_start();
+        NSLog("whisper_start() = \(val ? "was ok!" : "failed with some error")");
+        NSLog("======================================= CUT AFTER WHISPER_START");
+        if (!val) {
+            tunnel.cancelTunnelWithError(WhisperError.rustFailedWithSomeError)
+        }
     }
 }
 
@@ -49,23 +57,14 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             throw WhisperError.failedToGetWsIp
         }
         let actualIp = String(cString: ip);
-        NSLog("======================================= CUT AFTER WHISPER_GET_WS_IP \(actualIp)");
-        // set ip in tunnel settings
-        let netSettings = NEPacketTunnelNetworkSettings.init(tunnelRemoteAddress: actualIp);
-        netSettings.mtu = 1500;
-        let ipv4Settings = NEIPv4Settings(addresses: [ "10.0.10.1" ], subnetMasks: [ "255.255.255.0" ]);
-        ipv4Settings.includedRoutes = [ NEIPv4Route.default() ];
-        // exclude just the wisp server
-        ipv4Settings.excludedRoutes = [ NEIPv4Route.init(destinationAddress: actualIp, subnetMask: "255.255.255.255") ];
-        netSettings.ipv4Settings = ipv4Settings;
-        // TODO: IPv6
+        NSLog("======================================= CUT AFTER WHISPER_GET_WS_IP: ip = \(actualIp)");
         NSLog("======================================= CUT BEFORE SET TUNNEL NET SETTINGS 2");
-        try await self.setTunnelNetworkSettings(netSettings);
+        try await self.setTunnelNetworkSettings(createTunnelSettings(ip: actualIp));
         NSLog("======================================= CUT AFTER SET TUNNEL NET SETTINGS 2");
 
         // DispatchQueue.global(qos: .default).async { whisper_start() }
 
-        let thread = WhisperThread();
+        let thread = WhisperThread(tunnel: self);
         // surely 16M will be enough :clueless:
         thread.stackSize = 4096 * 4096;
         thread.start();
@@ -109,11 +108,23 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             let utunPrefix = "utun".utf8CString.dropLast()
             return (0...1024).first { (_ fd: Int32) -> Bool in
                 var len = socklen_t(buf.count)
-                return getsockopt(fd, 2, 2, &buf, &len) == 0 && buf.starts(with: utunPrefix)
+                let ok = getsockopt(fd, 2, 2, &buf, &len) == 0 && buf.starts(with: utunPrefix)
+                NSLog("bruteforcing \(ok), \(String(cString:buf))");
+                return ok
             }
         } else {
             return self.packetFlow.value(forKeyPath: "socket.fileDescriptor") as? Int32
         }
+    }
+    func createTunnelSettings(ip: String) -> NEPacketTunnelNetworkSettings  {
+        let newSettings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: ip)
+        newSettings.ipv4Settings = NEIPv4Settings(addresses: ["240.0.0.1"], subnetMasks: ["255.255.255.0"])
+        newSettings.ipv4Settings?.includedRoutes = [NEIPv4Route.`default`()]
+        // newSettings.ipv6Settings?.includedRoutes = [NEIPv6Route.`default`()]
+        newSettings.proxySettings = nil
+        newSettings.dnsSettings = NEDNSSettings(servers: ["8.8.8.8", "8.8.4.4"])
+        newSettings.mtu = 1500
+        return newSettings
     }
 }
 
