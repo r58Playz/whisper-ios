@@ -51,7 +51,7 @@ struct ContentView: View {
                 try await installProfile();
                 self.buttonText = "OK";
             } catch {
-                self.buttonText = "Error";
+                self.buttonText = "Error: \(error)";
             }
             Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in 
                 self.buttonText = "Add VPN";
