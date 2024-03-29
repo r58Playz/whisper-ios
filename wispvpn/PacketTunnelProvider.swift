@@ -27,9 +27,6 @@ class WhisperThread: Thread {
 class PacketTunnelProvider: NEPacketTunnelProvider {
     override func startTunnel(options: [String : NSObject]? = nil) async throws {
         // get ws from user
-        guard let proto = protocolConfiguration as? NETunnelProviderProtocol else {
-            throw WhisperError.failedToGetConfig
-        }
 
         // set mtu in tunnel settings
         let netSettings_preconnect = NEPacketTunnelNetworkSettings.init(tunnelRemoteAddress: "127.0.0.1");

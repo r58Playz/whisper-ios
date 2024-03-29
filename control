@@ -2,7 +2,7 @@ Package: dev.r58playz.whisper
 Name: Whisper
 Version: 0.0.1
 Architecture: iphoneos-arm
-Description: An awesome application!
+Description: App that provides a VPN via a Wisp protocol client.
 Maintainer: r58Playz
 Author: r58Playz
 Section: Utilities
