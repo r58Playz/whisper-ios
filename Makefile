@@ -10,7 +10,7 @@ APPLICATION_NAME = Whisper
 
 Whisper_FILES = ContentView.swift WhisperApp.swift
 Whisper_FRAMEWORKS = SwiftUI NetworkExtension
-Whisper_CODESIGN_FLAGS = -Sentitlements.xml
+Whisper_CODESIGN_FLAGS = -Swispvpn/entitlements.xml
 
 include $(THEOS_MAKE_PATH)/application.mk
 SUBPROJECTS += wispvpn
