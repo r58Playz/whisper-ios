@@ -3,6 +3,7 @@ import Foundation
 
 enum WhisperError: Error {
     case failedToGetConfig
+    case failedToInitLogging
     case failedToInit
     case failedToGetTunFd
     case failedToGetWsIp
@@ -15,10 +16,8 @@ class WhisperThread: Thread {
         self.tunnel = tunnel
     }
     override func main() {
-        NSLog("======================================= CUT BEFORE WHISPER_START");
         let val = whisper_start();
         NSLog("whisper_start() = \(val ? "was ok!" : "failed with some error")");
-        NSLog("======================================= CUT AFTER WHISPER_START");
         if (!val) {
             tunnel.cancelTunnelWithError(WhisperError.rustFailedWithSomeError)
         }
@@ -31,7 +30,6 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         guard let proto = protocolConfiguration as? NETunnelProviderProtocol else {
             throw WhisperError.failedToGetConfig
         }
-        NSLog("protocolConfiguration \(proto)")
 
         // set mtu in tunnel settings
         let netSettings_preconnect = NEPacketTunnelNetworkSettings.init(tunnelRemoteAddress: "127.0.0.1");
@@ -43,13 +41,15 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             NSLog("getTunFd failed");
             throw WhisperError.failedToGetTunFd
         }
-        NSLog("======================================= CUT BEFORE WHISPER_INIT \(tunFd)");
         // whisper_init(tunFd, ws, mtu);
+        if (!whisper_init_logging("dev.r58playz.whisper.wispvpn")) {
+            NSLog("whisper_init_logging failed")
+            throw WhisperError.failedToInitLogging
+        }
         if (!whisper_init(tunFd, protocolConfiguration.serverAddress, 1500)) {
             NSLog("whisper_init failed");
             throw WhisperError.failedToInit
         }
-        NSLog("======================================= CUT AFTER WHISPER_INIT");
 
         // let ip = whisper_get_ws_ip();
         guard let ip = whisper_get_ws_ip() else {
@@ -57,10 +57,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             throw WhisperError.failedToGetWsIp
         }
         let actualIp = String(cString: ip);
-        NSLog("======================================= CUT AFTER WHISPER_GET_WS_IP: ip = \(actualIp)");
-        NSLog("======================================= CUT BEFORE SET TUNNEL NET SETTINGS 2");
         try await self.setTunnelNetworkSettings(createTunnelSettings(ip: actualIp));
-        NSLog("======================================= CUT AFTER SET TUNNEL NET SETTINGS 2");
 
         // DispatchQueue.global(qos: .default).async { whisper_start() }
 
@@ -69,9 +66,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         thread.stackSize = 4096 * 4096;
         thread.start();
 
-        NSLog("======================================= CUT BEFORE WHISPER_FREE");
         whisper_free(ip);
-        NSLog("======================================= CUT AFTER WHISPER_FREE");
     }
     
     override func stopTunnel(with reason: NEProviderStopReason, completionHandler: @escaping () -> Void) {

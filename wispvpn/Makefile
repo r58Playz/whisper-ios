@@ -1,6 +1,9 @@
 TARGET := iphone:clang:latest:14.0
 INSTALL_TARGET_PROCESSES = wispvpn
 
+# theos discord people say apps are only arm64 and arm64e spams warnings
+ARCHS = arm64
+
 include $(THEOS)/makefiles/common.mk
 
 APPEX_NAME = wispvpn

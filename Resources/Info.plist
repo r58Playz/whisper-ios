@@ -4,6 +4,10 @@
 <dict>
 	<key>CFBundleExecutable</key>
 	<string>Whisper</string>
+    <key>CFBundleDisplayName</key>
+    <string>Whisper</string>
+    <key>CFBundleName</key>
+    <string>Whisper</string>
 	<key>CFBundleIcons</key>
 	<dict>
 		<key>CFBundlePrimaryIcon</key>

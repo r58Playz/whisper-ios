@@ -1,17 +1,26 @@
 import SwiftUI
 import NetworkExtension
+import Foundation
 
 struct ContentView: View {
     @State var buttonText = "Add VPN";
     @State var serverAddress = "wss://anura.pro/";
 	var body: some View {
         VStack {
-            TextField("Server", text:$serverAddress)
+            Text("Whisper").font(.title)
+            Text("Turn any Wisp server into a VPN")
+            Spacer()
+            HStack {
+                Text("Wisp server:")
+                TextField("wss://anura.pro/", text:$serverAddress)
+            }
             Button(action: installBtn) {
                 Text(buttonText)
                     .padding()
             }
-        }
+            Text("Connect to Whisper via the Settings app.")
+            Spacer()
+        }.padding()
 	}
 
     func makeManager() -> NETunnelProviderManager {
@@ -31,29 +40,22 @@ struct ContentView: View {
         return manager
     }
 
-    func installProfile(_ completion: @escaping (Result<Void, Error>) -> Void) {
+    func installProfile() async throws {
         let tunnel = makeManager()
-        tunnel.saveToPreferences { error in
-            if let error = error {
-                return completion(.failure(error))
-            }
-
-            tunnel.loadFromPreferences { error in
-                completion(.success(()))
-            }
-        }
+        try await tunnel.saveToPreferences()
     }
 
     func installBtn() {
-        installProfile({ res in 
-            switch res {
-                case .success():
-                    buttonText = "OK";
-                    break;
-                case .failure(let err):
-                    buttonText = "Fail \(err)";
-                    break;
+        Task {
+            do {
+                try await installProfile();
+                self.buttonText = "OK";
+            } catch {
+                self.buttonText = "Error";
             }
-        })
+            Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in 
+                self.buttonText = "Add VPN";
+            }
+        }
     }
 }
