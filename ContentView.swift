@@ -18,11 +18,16 @@ struct ContentView: View {
                         .modifier(FancyInputViewModifier())
                 }
                 Button(action: installBtn) {
-                    if inProgress {
+                    if inProgress && !success {
                         ProgressView()
                             .padding()
                     }
-                    Text("Add VPN")
+                    if success && !inProgress {
+                        Image(systemName: "checkmark")
+                            .padding()
+                            .foregroundColor(.green)
+                    }
+                    Text(success ? "Success" : "Add VPN")
                         .padding()
                         .foregroundColor(inProgress ? Color(UIColor.secondaryLabel) : (success ? .green : .accentColor))
                 }
@@ -36,6 +41,7 @@ struct ContentView: View {
         .navigationTitle("Whisper")
         }
         .animation(.timingCurve(0.25, 0.1, 0.35, 1.75).speed(1.2), value: inProgress)
+        .animation(.timingCurve(0.25, 0.1, 0.35, 1.75).speed(1.2), value: success)
         .navigationViewStyle(StackNavigationViewStyle())
 	}
 
@@ -71,10 +77,8 @@ struct ContentView: View {
             } catch {
                print("Error: \(error)") // TODO: Alert
             }
-            Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in
-                withAnimation {
-                    self.success = false
-                }
+            Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { _ in
+                self.success = false
             }
         }
         inProgress = false
