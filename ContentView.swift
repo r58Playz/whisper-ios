@@ -3,24 +3,33 @@ import NetworkExtension
 import Foundation
 
 struct ContentView: View {
-    @State var buttonText = "Add VPN";
-    @State var serverAddress = "wss://anura.pro/";
+    @State var serverAddress = "wss://wisp.mercurywork.shop/";
+
+    @State var success = false
+
 	var body: some View {
-        VStack {
-            Text("Whisper").font(.title)
-            Text("Turn any Wisp server into a VPN")
-            Spacer()
-            HStack {
-                Text("Wisp server:")
-                TextField("wss://anura.pro/", text:$serverAddress)
-            }
-            Button(action: installBtn) {
-                Text(buttonText)
-                    .padding()
-            }
-            Text("Connect to Whisper via the Settings app.")
-            Spacer()
-        }.padding()
+    	NavigationView {
+        ZStack {
+            VStack {
+                HStack {
+                    Text("Wisp server:")
+                    TextField("wss://wisp.mercurywork.shop/", text:$serverAddress)
+                        .modifier(FancyInputViewModifier())
+                }
+                Button(action: installBtn) {
+                    Text("Add VPN")
+                        .padding()
+                        .foregroundColor(success ? .green : .accentColor)
+                }
+                .background(success ? Color.green.opacity(0.1) : Color.accentColor.opacity(0.1))
+                .cornerRadius(12)
+                Text("Connect to Whisper via the Settings app.")
+                Spacer()
+            }.padding()
+        }
+        .navigationTitle("Whisper")
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
 	}
 
     func makeManager() -> NETunnelProviderManager {
@@ -49,12 +58,15 @@ struct ContentView: View {
         Task {
             do {
                 try await installProfile();
-                self.buttonText = "OK";
+                // TODO: Haptic feedback
+                self.success = true
             } catch {
-                self.buttonText = "Error: \(error)";
+               print("Error: \(error)") // TODO: Alert
             }
-            Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in 
-                self.buttonText = "Add VPN";
+            Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in
+                withAnimation {
+                    self.success = false
+                }
             }
         }
     }
