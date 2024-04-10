@@ -6,6 +6,7 @@ struct ContentView: View {
     @State var serverAddress = "wss://wisp.mercurywork.shop/";
 
     @State var success = false
+    @State var inProgress = false
 
 	var body: some View {
     	NavigationView {
@@ -17,18 +18,24 @@ struct ContentView: View {
                         .modifier(FancyInputViewModifier())
                 }
                 Button(action: installBtn) {
+                    if inProgress {
+                        ProgressView()
+                            .padding()
+                    }
                     Text("Add VPN")
                         .padding()
-                        .foregroundColor(success ? .green : .accentColor)
+                        .foregroundColor(inProgress ? Color(UIColor.secondaryLabel) : (success ? .green : .accentColor))
                 }
-                .background(success ? Color.green.opacity(0.1) : Color.accentColor.opacity(0.1))
+                .background(inProgress ? Color(UIColor.secondarySystemBackground).opacity(0.1) : (success ? Color.green.opacity(0.1) : Color.accentColor.opacity(0.1)))
                 .cornerRadius(12)
+                .disabled(inProgress)
                 Text("Connect to Whisper via the Settings app.")
                 Spacer()
             }.padding()
         }
         .navigationTitle("Whisper")
         }
+        .animation(.timingCurve(0.25, 0.1, 0.35, 1.75).speed(1.2), value: inProgress)
         .navigationViewStyle(StackNavigationViewStyle())
 	}
 
@@ -55,6 +62,7 @@ struct ContentView: View {
     }
 
     func installBtn() {
+        inProgress = true
         Task {
             do {
                 try await installProfile();
@@ -69,5 +77,6 @@ struct ContentView: View {
                 }
             }
         }
+        inProgress = false
     }
 }

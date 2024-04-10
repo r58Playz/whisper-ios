@@ -23,9 +23,9 @@ public struct FancyInputViewModifier: ViewModifier {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(colorScheme == .dark ? .white.opacity(0.2): Color.accentColor.opacity(0.4), lineWidth: 2)
                 )
-                .background(
-                    Color.accentColor.opacity(colorScheme == .dark ?0.075:0.0)
-                )
+                //.background(
+                //    Color.accentColor.opacity(colorScheme == .dark ?0.075:0.0)
+                //)
 
                 .cornerRadius(12)
         }.background(colorScheme == .dark ? VisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial)):VisualEffectView(effect: UIBlurEffect(style: .systemThickMaterial))).cornerRadius(12)
