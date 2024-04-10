@@ -21,18 +21,19 @@ struct ContentView: View {
             HStack {
               if inProgress && !success {
                 ProgressView()
-                  .padding()
+                    .padding(.trailing, 4)
               }
               if success && !inProgress {
                 Image(systemName: "checkmark")
-                  .padding()
                   .foregroundColor(.green)
+                  .padding(.trailing, 4)
               }
               Text(success ? "Success" : "Add VPN")
                 .foregroundColor(
                   inProgress ? Color(UIColor.secondaryLabel) : (success ? .green : .accentColor))
             }
-            .padding()
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
           }
           .background(
             inProgress
